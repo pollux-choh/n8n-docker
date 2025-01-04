@@ -55,7 +55,7 @@ services:
       - "--log=stdout"
       - "--log-level=debug"
       - "--host-header=localhost"
-      - "--url=dingo-integral-merely.ngrok-free.app"
+      - "--url=${NGROK_DOMAIN_NAME}"
       - "traefik:80"
     networks:
       - proxy
