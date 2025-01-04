@@ -9,15 +9,22 @@ services:
     restart: always
     command:
       - "--log.level=DEBUG"
-      - "--api.insecure=true"
+      - "--api.dashboard=true" # 대시보드 활성화
+      - "--api.insecure=true"  # HTTP로 대시보드 접근 허용
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"  # HTTPS 엔드포인트 추가
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"               # letsencrypt로 자동으로 acme로 인증서 받아옴
+      - "--certificatesresolvers.myresolver.acme.email=${ADMIN_EMAIL}"            # letsencrypt로 인증서를 받을때 admin email 지정
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"  # letsencrypt 인증서 파일
     ports:
       - 80:80
+      - 443:443
       - 8080:8080 # Traefik Dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt  # 인증서 저장 위치
     labels:
       - traefik.enable=true
     networks:
