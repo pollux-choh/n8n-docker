@@ -1,0 +1,88 @@
+networks:
+  proxy:
+    name: proxy
+
+services:
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    restart: always
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - 80:80
+      - 8080:8080 # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - traefik.enable=true
+    networks:
+      - proxy
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    environment:
+      - N8N_PATH=/n8n
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - TZ=Asia/Seoul
+    volumes:
+      - n8n_data:/home/node/.n8n
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=PathPrefix(`/n8n`)"
+      - "traefik.http.routers.n8n.middlewares=n8n-strip-prefix"
+      - "traefik.http.middlewares.n8n-strip-prefix.stripprefix.prefixes=/n8n"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+    networks:
+      - proxy
+
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok
+    ports:
+      - "4040:4040" # ngrok dashboard
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN} # Use the token from .env file
+      - NGROK_REGION=us # or your preferred region (e.g., eu, ap, au)
+    command: 
+      - "http"
+      - "--log=stdout"
+      - "--log-level=debug"
+      - "--host-header=localhost"
+      - "--url=dingo-integral-merely.ngrok-free.app"
+      - "traefik:80"
+    networks:
+      - proxy
+    depends_on:
+      - traefik
+
+  fastapi-app:
+    image: fastapi-app:latest
+    container_name: fastapi-app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fastapi-app.rule=PathPrefix(`/fastapi-app`) || PathPrefix(`/fastapi-app/`)"
+      - "traefik.http.routers.fastapi-app.middlewares=fastapi-app-strip"
+      - "traefik.http.middlewares.fastapi-app-strip.stripprefix.prefixes=/fastapi-app"
+      - "traefik.http.services.fastapi-app.loadbalancer.server.port=8000"
+    networks:
+      - proxy
+
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=PathPrefix(`/whoami`)"
+    networks:
+      - proxy 
+
+volumes:
+  n8n_data:
+    external: true
