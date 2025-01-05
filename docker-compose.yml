@@ -34,7 +34,10 @@ services:
     image: docker.n8n.io/n8nio/n8n
     container_name: n8n
     environment:
+      - N8N_EDITOR_BASE_URL="https://${NGROK_DOMAIN_NAME}/n8n"
+      - N8N_ENDPOINT_REST=rest 
       - N8N_PATH=/n8n
+      - WEBHOOK_URL="https://${NGROK_DOMAIN_NAME}/n8n/"
       - GENERIC_TIMEZONE=Asia/Seoul
       - TZ=Asia/Seoul
     volumes:
